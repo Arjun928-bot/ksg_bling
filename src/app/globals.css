@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { background: #F7F1E1; color: #14342B; }
+  body { font-family: var(--font-sans), system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 3px solid #C79A2B; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+}
+
+@layer components {
+  .btn { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 text-base font-semibold transition-colors; }
+  .btn-gold { @apply btn bg-gold text-forest hover:bg-gold-light; }
+  .btn-green { @apply btn bg-forest text-cream hover:bg-forest-700; }
+  .field { @apply min-h-12 w-full rounded-lg border border-forest/25 bg-white px-4 text-base text-forest placeholder:text-forest/40 focus:border-gold; }
+}
+
+@media print {
+  html, body { background: #fff !important; }
+}
