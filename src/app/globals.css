@@ -1,21 +1,129 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  html { background: #F7F1E1; color: #14342B; }
-  body { font-family: var(--font-sans), system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
-  :focus-visible { outline: 3px solid #C79A2B; outline-offset: 2px; }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  html {
+    background: #F7F1E1;
+    color: #14342B;
+    width: 100%;
+    min-height: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+    margin: 0;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  :focus-visible {
+    outline: 3px solid #C79A2B;
+    outline-offset: 2px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
-  .btn { @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 text-base font-semibold transition-colors; }
-  .btn-gold { @apply btn bg-gold text-forest hover:bg-gold-light; }
-  .btn-green { @apply btn bg-forest text-cream hover:bg-forest-700; }
-  .field { @apply min-h-12 w-full rounded-lg border border-forest/25 bg-white px-4 text-base text-forest placeholder:text-forest/40 focus:border-gold; }
+  .btn {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 text-base font-semibold transition-colors;
+    touch-action: manipulation;
+  }
+
+  .btn-gold {
+    @apply btn bg-gold text-forest hover:bg-gold-light;
+  }
+
+  .btn-green {
+    @apply btn bg-forest text-cream hover:bg-forest-700;
+  }
+
+  .field {
+    @apply min-h-12 w-full min-w-0 rounded-lg border border-forest/25 bg-white px-4 text-base text-forest placeholder:text-forest/40 focus:border-gold;
+  }
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  main {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  html,
+  body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding-left: 14px;
+    padding-right: 14px;
+    font-size: 14px;
+  }
+
+  .field {
+    min-height: 44px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 16px;
+  }
+
+  table {
+    font-size: 13px;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
 }
 
 @media print {
-  html, body { background: #fff !important; }
+  html,
+  body {
+    background: #fff !important;
+  }
 }

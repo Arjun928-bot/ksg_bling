@@ -35,6 +35,8 @@ type Input = {
   name: string;
   mobile: string;
   address: string;
+  state?: string;
+  gstEnabled?: boolean;
   confirmMobile?: boolean;
   confirmAddress?: boolean;
 };
@@ -49,6 +51,8 @@ async function run(input: Input): Promise<CustomerResult> {
     p_address: input.address,
     p_confirm_mobile: Boolean(input.confirmMobile),
     p_confirm_address: Boolean(input.confirmAddress),
+    p_state: input.state || "Kerala",
+    p_gst_enabled: input.gstEnabled ?? true,
   };
 
   if (input.id && user.role !== "admin") {
@@ -76,11 +80,11 @@ async function run(input: Input): Promise<CustomerResult> {
   }
 
   revalidatePath("/customers");
+  revalidatePath("/billing");
 
   return data as CustomerResult;
 }
 
-/** Used by the billing screen to register a customer without leaving the bill. */
 export async function createCustomerAction(
   input: Input
 ): Promise<CustomerResult> {
@@ -101,7 +105,7 @@ export async function searchCustomers(q: string) {
 
   const { data } = await supabase
     .from("customers")
-    .select("id, name, mobile, customer_code")
+    .select("id, name, mobile, customer_code, gst_enabled")
     .eq("is_active", true)
     .or(
       `name.ilike.%${term}%,mobile.ilike.%${term}%,customer_code.ilike.%${term}%`
@@ -114,18 +118,22 @@ export async function searchCustomers(q: string) {
   const { data: addrs } = ids.length
     ? await supabase
         .from("customer_addresses")
-        .select("customer_id, address")
+        .select("customer_id, address, state")
         .eq("is_current", true)
         .in("customer_id", ids)
     : {
         data: [] as {
           customer_id: string;
           address: string;
+          state: string | null;
         }[],
       };
 
   const addr = new Map(
-    (addrs ?? []).map((a) => [a.customer_id, a.address])
+    (addrs ?? []).map((a) => [
+      a.customer_id,
+      { address: a.address, state: a.state },
+    ])
   );
 
   return (data ?? []).map((c) => ({
@@ -133,7 +141,9 @@ export async function searchCustomers(q: string) {
     name: c.name,
     mobile: c.mobile,
     code: c.customer_code,
-    address: addr.get(c.id) ?? "",
+    address: addr.get(c.id)?.address ?? "",
+    state: addr.get(c.id)?.state ?? "Kerala",
+    gst_enabled: c.gst_enabled ?? true,
   }));
 }
 
@@ -154,6 +164,8 @@ export async function saveCustomer(
     name: s("name"),
     mobile: s("mobile"),
     address: s("address"),
+    state: s("state"),
+    gstEnabled: fd.get("gst_enabled") === "on",
     confirmMobile: fd.get("confirm_mobile") === "on",
     confirmAddress: fd.get("confirm_address") === "on",
   });
@@ -166,9 +178,7 @@ export async function saveCustomer(
   }
 
   if (result.status === "error") {
-    return {
-      error: result.error,
-    };
+    return { error: result.error };
   }
 
   if (
@@ -181,7 +191,45 @@ export async function saveCustomer(
     };
   }
 
-  return {
-    error: "Unexpected customer response.",
-  };
+  return { error: "Unexpected customer response." };
+}
+
+// ADMIN: DELETE CUSTOMER
+export async function deleteCustomer(formData: FormData) {
+  await requireUser(["admin"]);
+
+  const id = String(formData.get("id") ?? "");
+
+  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+    redirect("/customers");
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("delete_customer", {
+    p_customer_id: id,
+  });
+
+  if (error) {
+    console.error("DELETE CUSTOMER ERROR:", error);
+
+    const detail = [
+      error.message,
+      error.code ? `Code: ${error.code}` : "",
+      error.details ?? "",
+      error.hint ?? "",
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
+    redirect(
+      `/customers/${id}?error=delete&detail=${encodeURIComponent(detail)}`
+    );
+  }
+
+  revalidatePath("/customers");
+  revalidatePath("/billing");
+  revalidatePath(`/customers/${id}`);
+
+  redirect("/customers?archived=success");
 }

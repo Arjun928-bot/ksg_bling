@@ -33,12 +33,14 @@ export async function saveProduct(
     name: text(formData, "name"),
     sku: text(formData, "sku"),
     barcode: text(formData, "barcode"),
-    category_id: text(formData, "category_id"),
+    category_id: text(formData, "category_id") || null,
     description: text(formData, "description"),
     unit: text(formData, "unit"),
     purchase_price: text(formData, "purchase_price"),
     selling_price: text(formData, "selling_price"),
     low_stock_limit: text(formData, "low_stock_limit"),
+    gst_rate: text(formData, "gst_rate"),
+    gst_pricing_type: text(formData, "gst_pricing_type"),
     is_active: formData.get("is_active") === "on",
   });
 
@@ -55,7 +57,6 @@ export async function saveProduct(
     };
   }
 
-  // Product image
   let image_url: string | null =
     text(formData, "image_url") || null;
 
@@ -101,7 +102,6 @@ export async function saveProduct(
       .getPublicUrl(path).data.publicUrl;
   }
 
-  // Save product
   const row = {
     ...parsed.data,
     image_url,
@@ -156,7 +156,6 @@ export async function saveProduct(
     };
   }
 
-  // Save audit log
   const { error: auditError } = await supabase
     .from("audit_logs")
     .insert({
@@ -167,6 +166,8 @@ export async function saveProduct(
       details: {
         sku: parsed.data.sku,
         name: parsed.data.name,
+        gst_rate: parsed.data.gst_rate,
+        gst_pricing_type: parsed.data.gst_pricing_type,
       },
     });
 
@@ -175,15 +176,11 @@ export async function saveProduct(
   }
 
   revalidatePath("/products");
-
   redirect("/products");
 }
 
 // Activate or deactivate product
-export async function setActive(
-  id: string,
-  value: boolean
-) {
+export async function setActive(id: string, value: boolean) {
   const user = await requireUser(["admin"]);
   const supabase = await createClient();
 
@@ -208,10 +205,7 @@ export async function setActive(
 }
 
 // Archive or restore product
-export async function setArchived(
-  id: string,
-  value: boolean
-) {
+export async function setArchived(id: string, value: boolean) {
   const user = await requireUser(["admin"]);
   const supabase = await createClient();
 
@@ -236,6 +230,41 @@ export async function setArchived(
   });
 
   revalidatePath("/products");
+}
+
+// Soft delete or restore product
+export async function setDeleted(id: string, value: boolean) {
+  const user = await requireUser(["admin"]);
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("products")
+    .update({
+      is_deleted: value,
+      ...(value ? { is_active: false } : {}),
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("PRODUCT DELETE ERROR:", error);
+    throw new Error("Could not update product delete status.");
+  }
+
+  const { error: auditError } = await supabase
+    .from("audit_logs")
+    .insert({
+      actor_id: user.id,
+      action: value ? "product.delete" : "product.restore_deleted",
+      table_name: "products",
+      record_id: id,
+    });
+
+  if (auditError) {
+    console.error("PRODUCT DELETE AUDIT ERROR:", auditError);
+  }
+
+  revalidatePath("/products");
+  revalidatePath("/dashboard");
 }
 
 // Categories

@@ -1,23 +1,78 @@
+
 import { z } from "zod";
 
 export const UNITS = [
-  ["piece", "Piece"], ["packet", "Packet"], ["gram", "Gram"], ["kilogram", "Kilogram"],
-  ["millilitre", "Millilitre"], ["litre", "Litre"], ["other", "Other"],
+  "kg",
+  "g",
+  "ltr",
+  "ml",
+  "pcs",
+  "pack",
+  "box",
+  "dozen",
+  "bag",
+  "bottle",
 ] as const;
 
+// Retained for compatibility with other files.
+export const GST_RATES = [0, 5, 12, 18, 28] as const;
+
 export const productSchema = z.object({
-  name: z.string().trim().min(2, "Enter the product name").max(120),
-  sku: z.string().trim().toUpperCase()
-    .regex(/^[A-Z0-9][A-Z0-9-]{1,39}$/, "Use letters, numbers and hyphens only (2 to 40 characters)"),
-  barcode: z.string().trim().max(64).transform((v) => v || null),
-  category_id: z.string().trim().transform((v) => v || null)
-    .refine((v) => v === null || /^[0-9a-f-]{36}$/i.test(v), "Choose a valid category"),
-  description: z.string().trim().max(1000).transform((v) => v || null),
-  unit: z.enum(["piece", "packet", "gram", "kilogram", "millilitre", "litre", "other"]),
-  purchase_price: z.coerce.number({ invalid_type_error: "Enter a price" }).min(0, "Cannot be negative").max(10_000_000),
-  selling_price: z.coerce.number({ invalid_type_error: "Enter a price" }).min(0, "Cannot be negative").max(10_000_000),
-  low_stock_limit: z.coerce.number({ invalid_type_error: "Enter a number" }).min(0, "Cannot be negative").max(10_000_000),
-  is_active: z.boolean(),
+  name: z.string().trim().min(1, "Product name is required").max(150),
+
+  sku: z.string().trim().min(1, "SKU is required").max(80),
+
+  barcode: z
+    .string()
+    .trim()
+    .max(100)
+    .optional()
+    .or(z.literal("")),
+
+    category_id: z
+    .union([
+      z.string().uuid(),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional()
+    .transform((value) => value || null),
+
+  // unit: z.string().trim().min(1, "Choose a unit").max(30),
+
+  purchase_price: z.coerce
+    .number()
+    .min(0, "Purchase price cannot be negative")
+    .finite(),
+
+  selling_price: z.coerce
+    .number()
+    .min(0, "Selling price cannot be negative")
+    .finite(),
+
+  gst_rate: z.coerce
+    .number()
+    .min(0, "GST cannot be negative")
+    .max(100, "GST cannot exceed 100%")
+    .finite("Enter a valid GST percentage"),
+
+  gst_pricing_type: z.enum(["inclusive", "exclusive"]),
+
+  low_stock_limit: z.coerce
+  .number()
+  .min(0, "Low stock limit cannot be negative")
+  .finite(),
+
+  description: z
+    .string()
+    .trim()
+    .max(1000)
+    .optional()
+    .or(z.literal("")),
 });
 
-export type ProductFormState = { error?: string; fieldErrors?: Record<string, string> };
+export type ProductFormState = {
+  error?: string;
+  ok?: string;
+  fieldErrors?: Record<string, string | undefined>;
+};

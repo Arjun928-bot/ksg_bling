@@ -34,6 +34,7 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // Keep authentication verification here for secure session refresh.
   await supabase.auth.getUser();
 
   return response;
